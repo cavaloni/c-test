@@ -11,6 +11,7 @@ DICTIONARY_PATH = Path(__file__).resolve().parent / "sowpods.txt"
 _VOWELS = set("aeiou")
 _ANAGRAM_MAP: dict[str, list[str]] | None = None
 _BUCKET_WORDS: dict[int, list[str]] | None = None
+_UNSOLVABLE_WORDS: dict[int, list[str]] | None = None
 _MIN_LEN: int | None = None
 _MAX_LEN: int | None = None
 
@@ -50,7 +51,7 @@ def _difficulty_for_length(length: int) -> int:
 
 
 def _init() -> None:
-    global _ANAGRAM_MAP, _BUCKET_WORDS, _MIN_LEN, _MAX_LEN
+    global _ANAGRAM_MAP, _BUCKET_WORDS, _UNSOLVABLE_WORDS, _MIN_LEN, _MAX_LEN
     if _ANAGRAM_MAP is not None and _BUCKET_WORDS is not None:
         return
 
@@ -85,6 +86,20 @@ def _init() -> None:
 
     _ANAGRAM_MAP = dict(anagram_map)
     _BUCKET_WORDS = dict(bucket_words)
+
+    # Pre-compute unsolvable words for each difficulty bucket.
+    # For each word with vowels, find the first single-vowel mutation
+    # whose signature doesn't exist in the dictionary.
+    unsolvable_words: dict[int, list[str]] = defaultdict(list)
+    for d in range(1, 6):
+        for w in bucket_words[d]:
+            if not any(ch in _VOWELS for ch in w):
+                continue
+            for mutated in _single_vowel_mutations(w):
+                if _signature(mutated) not in _ANAGRAM_MAP:
+                    unsolvable_words[d].append(mutated)
+                    break
+    _UNSOLVABLE_WORDS = dict(unsolvable_words)
 
 
 def _validate_input(s: str, name: str) -> str:
@@ -177,7 +192,7 @@ def generate_puzzle(difficulty: int | None = None, unsolvable: bool = False) -> 
         base = choice(words)
         return _shuffle_not_identity(base)
 
-    return _generate_unsolvable_from_words(words)
+    return _generate_unsolvable_puzzle(difficulty)
 
 
 def _shuffle_not_identity(word: str) -> str:
@@ -210,36 +225,22 @@ def _shuffle_not_identity(word: str) -> str:
     return candidate
 
 
-def _generate_unsolvable_from_words(words: list[str]) -> str:
-    """Generate an unsolvable puzzle by mutating vowels in real words.
+def _generate_unsolvable_puzzle(difficulty: int) -> str:
+    """Return a pre-computed unsolvable puzzle for the given difficulty.
 
-    Strategy: Filter to words containing vowels, shuffle them, then
-    systematically try single-vowel mutations until we find one whose
-    letter signature doesn't exist in the dictionary. This guarantees
-    we try every candidate exactly once before giving up.
+    Unsolvable puzzles are computed once during initialization by finding
+    single-vowel mutations of real words whose signatures don't exist
+    in the dictionary.
     """
-    assert _ANAGRAM_MAP is not None
+    assert _UNSOLVABLE_WORDS is not None
 
-    words_with_vowels = [w for w in words if any(ch in _VOWELS for ch in w)]
-    if not words_with_vowels:
+    unsolvables = _UNSOLVABLE_WORDS.get(difficulty, [])
+    if not unsolvables:
         raise RuntimeError(
-            "No words with vowels in this difficulty bucket; "
-            "cannot generate unsolvable puzzle"
+            f"No unsolvable puzzles available for difficulty {difficulty}"
         )
 
-    shuffled_words = words_with_vowels[:]
-    shuffle(shuffled_words)
-
-    for base in shuffled_words:
-        for mutated in _single_vowel_mutations(base):
-            sig = _signature(mutated)
-            if sig not in _ANAGRAM_MAP:
-                return _shuffle_not_identity(mutated)
-
-    raise RuntimeError(
-        "Failed to generate an unsolvable puzzle: all vowel mutations "
-        "for this difficulty level are valid dictionary words"
-    )
+    return _shuffle_not_identity(choice(unsolvables))
 
 
 def _single_vowel_mutations(word: str) -> Iterator[str]:

@@ -55,9 +55,26 @@ This is a minimal definition—it doesn't account for letter frequency or common
 | `solve()` | O(L log L) | L = puzzle length; one sort + dict lookup |
 | `verify()` | O(L log L) | Early exit if signatures don't match |
 | `generate_puzzle()` (solvable) | O(L) | Random choice + shuffle |
-| `generate_puzzle()` (unsolvable) | O(W × V) | W = words in bucket, V = vowels per word; worst case iterates all |
+| `generate_puzzle()` (unsolvable) | O(1) | Pre-computed at init; random choice + shuffle |
 
 All operations are fast enough for interactive use (sub-second).
+
+### Pre-Computed Unsolvable Puzzles
+
+Unsolvable puzzles are **pre-computed during initialization** rather than generated on-demand.
+
+**Why this was changed:**
+- The original approach iterated through words at generation time, trying vowel mutations until finding one with no dictionary match
+- Worst case: O(W × V) where W = words in bucket, V = vowels per word
+- This was fast enough in practice, but unpredictable—some calls could be slower than others
+
+**Current approach:**
+- During init, we scan each difficulty bucket once and store all valid unsolvable mutations
+- Generation becomes O(1): just pick a random pre-computed puzzle and shuffle it
+
+**Tradeoff:**
+- Init time increases from ~0.35s to ~1s (one-time cost on first use)
+- All subsequent unsolvable generations are instant and consistent
 
 ### Alternative for performance considered: 26-Count Tuple Signature
 
