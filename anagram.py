@@ -193,10 +193,19 @@ def _shuffle_not_identity(word: str) -> str:
     if candidate != word:
         return candidate
 
-    for i in range(len(letters) - 1):
-        for j in range(i + 1, len(letters)):
-            if letters[i] != letters[j]:
-                letters[i], letters[j] = letters[j], letters[i]
+    # Fallback: if random shuffle accidentally returned the original word,
+    # force a swap of two distinct characters to ensure a valid puzzle.
+    # We pick random indices to avoid deterministic patterns.
+    n = len(letters)
+    indices = list(range(n))
+    shuffle(indices)
+
+    for i in range(n - 1):
+        idx1 = indices[i]
+        for j in range(i + 1, n):
+            idx2 = indices[j]
+            if letters[idx1] != letters[idx2]:
+                letters[idx1], letters[idx2] = letters[idx2], letters[idx1]
                 return "".join(letters)
     return candidate
 
