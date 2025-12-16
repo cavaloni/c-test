@@ -59,7 +59,7 @@ This is a minimal definition—it doesn't account for letter frequency or common
 
 All operations are fast enough for interactive use (sub-second).
 
-### Why Not a 26-Count Tuple Signature?
+### Alternative for performance considered: 26-Count Tuple Signature
 
 The current implementation computes signatures by sorting letters (`"dog"` → `"dgo"`). An alternative is a **26-count tuple**: count occurrences of each letter a-z.
 
@@ -105,3 +105,13 @@ python -m unittest -v
 | All same letters (`"aaa"`) | Puzzle equals input |
 | No solutions exist | `solve()` returns `[]` |
 | Invalid answer | `verify()` returns `False` |
+
+### Perfectionism Note
+Thoughts running through developer's head: "I should make this more perfect"
+"I should make this more perfect"
+"I should make this more perfect"
+"I should make this more perfect"
+"I think I'm done"
+"Wait, I should make this more perfect"
+"I'm a participant, not a developer, aren't I?"
+"anagram.verify('mntida', 'damnit')" 
